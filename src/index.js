@@ -1,13 +1,17 @@
 // @ts-check
-'use strict';
 
 const fs = require('fs');
 const path = require('path');
 const glob = require('glob');
-const chalk = require('chalk');
+const kleur = require('kleur');
 const requireg = require('requireg');
 const { get, forEach } = require('lodash');
-const { MrmUnknownTask, MrmUnknownAlias, MrmUndefinedOption } = require('./errors');
+const {
+	MrmUnknownTask,
+	MrmInvalidTask,
+	MrmUnknownAlias,
+	MrmUndefinedOption,
+} = require('./errors');
 
 /* eslint-disable no-console */
 
@@ -43,23 +47,43 @@ function getAllAliases(options) {
 }
 
 /**
+ * Runs an array of promises in series
+ *
+ * @method promiseSeries
+ *
+ * @param  {Array} items
+ * @param  {Function} iterator
+ * @return {Promise}
+ */
+function promiseSeries(items, iterator) {
+	return items.reduce((iterable, name) => {
+		return iterable.then(() => iterator(name));
+	}, Promise.resolve());
+}
+
+/**
  *
  * @param {string|string[]} name
  * @param {string[]} directories
  * @param {Object} options
  * @param {Object} argv
+ * @returns {Promise}
  */
 function run(name, directories, options, argv) {
 	if (Array.isArray(name)) {
-		name.forEach(n => run(n, directories, options, argv));
-		return;
+		return new Promise((resolve, reject) => {
+			promiseSeries(name, n => {
+				return run(n, directories, options, argv);
+			})
+				.then(() => resolve())
+				.catch(reject);
+		});
 	}
 
 	if (getAllAliases(options)[name]) {
-		runAlias(name, directories, options, argv);
-	} else {
-		runTask(name, directories, options, argv);
+		return runAlias(name, directories, options, argv);
 	}
+	return runTask(name, directories, options, argv);
 }
 
 /**
@@ -69,16 +93,24 @@ function run(name, directories, options, argv) {
  * @param {string[]} directories
  * @param {Object} options
  * @param {Object} [argv]
+ * @returns {Promise}
  */
 function runAlias(aliasName, directories, options, argv) {
-	const tasks = getAllAliases(options)[aliasName];
-	if (!tasks) {
-		throw new MrmUnknownAlias(`Alias “${aliasName}” not found.`);
-	}
+	return new Promise((resolve, reject) => {
+		const tasks = getAllAliases(options)[aliasName];
+		if (!tasks) {
+			reject(new MrmUnknownAlias(`Alias “${aliasName}” not found.`));
+			return;
+		}
 
-	console.log(chalk.yellow(`Running alias ${aliasName}...`));
+		console.log(kleur.yellow(`Running alias ${aliasName}...`));
 
-	tasks.forEach(name => runTask(name, directories, options, argv));
+		promiseSeries(tasks, name => {
+			return runTask(name, directories, options, argv);
+		})
+			.then(() => resolve())
+			.catch(reject);
+	});
 }
 
 /**
@@ -88,21 +120,35 @@ function runAlias(aliasName, directories, options, argv) {
  * @param {string[]} directories
  * @param {Object} options
  * @param {Object} [argv]
+ * @returns {Promise}
  */
 function runTask(taskName, directories, options, argv) {
-	const modulePath = tryResolve(
-		tryFile(directories, `${taskName}/index.js`),
-		`mrm-task-${taskName}`,
-		taskName
-	);
-	if (!modulePath) {
-		throw new MrmUnknownTask(`Task “${taskName}” not found.`, { taskName });
-	}
+	return new Promise((resolve, reject) => {
+		const modulePath = tryResolve(
+			tryFile(directories, `${taskName}/index.js`),
+			`mrm-task-${taskName}`,
+			taskName
+		);
 
-	console.log(chalk.cyan(`Running ${taskName}...`));
+		if (!modulePath) {
+			reject(new MrmUnknownTask(`Task “${taskName}” not found.`, { taskName }));
+			return;
+		}
 
-	const module = require(modulePath);
-	module(getConfigGetter(options), argv);
+		const module = require(modulePath);
+		if (typeof module !== 'function') {
+			reject(
+				new MrmInvalidTask(`Cannot call task “${taskName}”.`, { taskName })
+			);
+		}
+
+		console.log(kleur.cyan(`Running ${taskName}...`));
+		Promise.resolve(module(getConfigGetter(options), argv))
+			.then(() => {
+				resolve();
+			})
+			.catch(reject);
+	});
 }
 
 /**
@@ -144,9 +190,12 @@ function getConfigGetter(options) {
 	function require(...names) {
 		const unknown = names.filter(name => !options[name]);
 		if (unknown.length > 0) {
-			throw new MrmUndefinedOption(`Required config options are missed: ${unknown.join(', ')}.`, {
-				unknown,
-			});
+			throw new MrmUndefinedOption(
+				`Required config options are missed: ${unknown.join(', ')}.`,
+				{
+					unknown,
+				}
+			);
 		}
 		return config;
 	}

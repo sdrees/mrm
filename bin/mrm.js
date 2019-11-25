@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-'use strict';
 /* eslint-disable no-console */
 
 const path = require('path');
 const minimist = require('minimist');
-const chalk = require('chalk');
+const kleur = require('kleur');
 const longest = require('longest');
 const isDirectory = require('is-directory');
 const userHome = require('user-home');
@@ -13,23 +12,35 @@ const updateNotifier = require('update-notifier');
 const { padEnd, sortBy } = require('lodash');
 const { random } = require('middleearth-names');
 const { run, getConfig, getAllTasks, tryResolve } = require('../src/index');
-const { MrmUnknownTask, MrmUnknownAlias, MrmUndefinedOption } = require('../src/errors');
+const {
+	MrmUnknownTask,
+	MrmInvalidTask,
+	MrmUnknownAlias,
+	MrmUndefinedOption,
+} = require('../src/errors');
 
-let directories = [path.resolve(userHome, 'dotfiles/mrm'), path.resolve(userHome, '.mrm')];
+let directories = [
+	path.resolve(userHome, 'dotfiles/mrm'),
+	path.resolve(userHome, '.mrm'),
+];
 
 const EXAMPLES = [
 	['', '', 'List of available tasks'],
 	['<task>', '', 'Run a task or an alias'],
 	['<task>', '--dir ~/unicorn', 'Custom config and tasks folder'],
 	['<task>', '--preset unicorn', 'Load config and tasks from a preset'],
-	['<task>', '--config:foo coffee --config:bar pizza', 'Override config options'],
+	[
+		'<task>',
+		'--config:foo coffee --config:bar pizza',
+		'Override config options',
+	],
 ];
 
 // Update notifier
 const pkg = require('../package.json');
 updateNotifier({ pkg }).notify();
 
-process.on('uncaughtException', err => {
+process.on('unhandledRejection', err => {
 	if (err.constructor.name === 'MrmError') {
 		printError(err.message);
 		process.exit(1);
@@ -42,7 +53,8 @@ const argv = minimist(process.argv.slice(2));
 const tasks = argv._;
 
 const binaryPath = process.env._;
-const binaryName = binaryPath && binaryPath.endsWith('/npx') ? 'npx mrm' : 'mrm';
+const binaryName =
+	binaryPath && binaryPath.endsWith('/npx') ? 'npx mrm' : 'mrm';
 
 // Custom config / tasks directory
 if (argv.dir) {
@@ -75,9 +87,7 @@ const options = getConfig(directories, 'config.json', argv);
 if (tasks.length === 0 || tasks[0] === 'help') {
 	commandHelp();
 } else {
-	try {
-		run(tasks, directories, options, argv);
-	} catch (err) {
+	run(tasks, directories, options, argv).catch(err => {
 		if (err.constructor === MrmUnknownAlias) {
 			printError(err.message);
 		} else if (err.constructor === MrmUnknownTask) {
@@ -103,10 +113,16 @@ We’ve tried these locations:
 
 Note that when a preset is specified no default search locations are used.`);
 			}
+		} else if (err.constructor === MrmInvalidTask) {
+			printError(`${err.message}
+
+Make sure your task module exports a function.`);
 		} else if (err.constructor === MrmUndefinedOption) {
 			const { unknown } = err.extra;
 			const values = unknown.map(name => [name, random()]);
-			const heading = `Required config options are missed: ${listify(unknown)}.`;
+			const heading = `Required config options are missed: ${listify(
+				unknown
+			)}.`;
 			const cliHelp = `  ${binaryName} ${tasks.join(' ')} ${values
 				.map(([n, v]) => `--config:${n} "${v}"`)
 				.join(' ')}`;
@@ -144,15 +160,15 @@ Note that when a preset is specified no default search locations are used.`
 		} else {
 			throw err;
 		}
-	}
+	});
 }
 
 function commandHelp() {
 	console.log(
 		[
-			chalk.underline('Usage'),
+			kleur.underline('Usage'),
 			getUsage(),
-			chalk.underline('Available tasks'),
+			kleur.underline('Available tasks'),
 			getTasksList(options),
 		].join('\n\n')
 	);
@@ -164,9 +180,9 @@ function getUsage() {
 	return EXAMPLES.map(([command, options, description]) =>
 		[
 			'   ',
-			chalk.bold(binaryName),
-			chalk.cyan(command),
-			chalk.yellow(options),
+			kleur.bold(binaryName),
+			kleur.cyan(command),
+			kleur.yellow(options),
 			padEnd('', commandsWidth - (command + options).length),
 			description && `# ${description}`,
 		].join(' ')
@@ -174,20 +190,24 @@ function getUsage() {
 }
 
 function getTasksList() {
-	const tasks = getAllTasks(directories, options);
-	const names = sortBy(Object.keys(tasks));
+	const allTasks = getAllTasks(directories, options);
+	const names = sortBy(Object.keys(allTasks));
 	const nameColWidth = longest(names).length;
 
 	return names
 		.map(name => {
-			const description = Array.isArray(tasks[name]) ? `Runs ${listify(tasks[name])}` : tasks[name];
-			return '    ' + chalk.cyan(padEnd(name, nameColWidth)) + '  ' + description;
+			const description = Array.isArray(allTasks[name])
+				? `Runs ${listify(allTasks[name])}`
+				: allTasks[name];
+			return (
+				'    ' + kleur.cyan(padEnd(name, nameColWidth)) + '  ' + description
+			);
 		})
 		.join('\n');
 }
 
 function printError(message) {
 	console.log();
-	console.error(chalk.bold.red(message));
+	console.error(kleur.bold().red(message));
 	console.log();
 }
