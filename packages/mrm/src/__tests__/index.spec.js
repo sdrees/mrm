@@ -10,22 +10,29 @@ const {
 	getConfigFromCommandLine,
 	getConfig,
 	getConfigGetter,
+	processTaskOptions,
 	runTask,
 	runAlias,
 	run,
 	getAllAliases,
 	getAllTasks,
 } = require('../index');
+const configureInquirer = require('../../test/inquirer-mock');
 const task1 = require('../../test/dir1/task1');
 const task2 = require('../../test/dir1/task2');
 const task3 = require('../../test/dir2/task3');
 const task4 = require('../../test/dir2/task4');
 const task5 = require('../../test/dir2/task5');
+// interactive config tasks
+const task6 = require('../../test/dir3/task6');
+// const task7 = require('../../test/dir4/task7');
 
 const configFile = 'config.json';
 const directories = [
 	path.resolve(__dirname, '../../test/dir1'),
 	path.resolve(__dirname, '../../test/dir2'),
+	path.resolve(__dirname, '../../test/dir3'),
+	path.resolve(__dirname, '../../test/dir4'),
 ];
 const options = {
 	pizza: 'salami',
@@ -153,6 +160,70 @@ describe('getConfig', () => {
 	});
 });
 
+describe('processTaskOptions', () => {
+	const third = task6.parameters['third-config'];
+
+	beforeEach(() => third.default.mockClear());
+
+	it('should NOT prompt when interactive mode is disabled', async () => {
+		const answers = await processTaskOptions(task6, false);
+
+		expect(third.default).toHaveBeenCalledTimes(1);
+		expect(third.default).toHaveBeenCalledWith({
+			'first-config': undefined,
+			'second-config': 'default value',
+		});
+
+		expect(answers).toEqual({
+			'first-config': undefined,
+			'second-config': 'default value',
+			'third-config': 'default value',
+		});
+	});
+
+	it('should prompt when interactive mode is enabled', async () => {
+		configureInquirer({
+			'first-config': 'first value',
+			'second-config': 'second value',
+			// 'third-config': keep default
+		});
+
+		const answers = await processTaskOptions(task6, true);
+
+		expect(answers).toEqual({
+			'first-config': 'first value',
+			'second-config': 'second value',
+			'third-config': 'default value',
+		});
+	});
+
+	it('should respect parameters initial values on interactive mode', async () => {
+		configureInquirer({});
+
+		const answers = await processTaskOptions(task6, true);
+
+		expect(answers).toEqual({
+			'first-config': '',
+			'second-config': 'default value',
+			'third-config': 'default value',
+		});
+	});
+
+	it('should be possible to override parameters initial values', async () => {
+		configureInquirer({});
+
+		const answers = await processTaskOptions(task6, true, {
+			'first-config': 'initial',
+		});
+
+		expect(answers).toEqual({
+			'first-config': 'initial',
+			'second-config': 'default value',
+			'third-config': 'default value',
+		});
+	});
+});
+
 describe('getConfigGetter', () => {
 	it('should return an API', () => {
 		const result = getConfigGetter({});
@@ -210,6 +281,7 @@ describe('runTask', () => {
 	beforeEach(() => {
 		task1.mockClear();
 		task4.mockClear();
+		task6.mockClear();
 	});
 
 	it('should run a module', () => {
@@ -248,6 +320,17 @@ describe('runTask', () => {
 		);
 	});
 
+	it('should throw when task module is invalid', () => {
+		const result = runTask('task7', directories, {}, {});
+
+		// ideally we can use toThrowError but that works with >= jest@22
+		// https://github.com/facebook/jest/issues/5076
+		return expect(result).rejects.toHaveProperty(
+			'message',
+			'Cannot call task “task7”.'
+		);
+	});
+
 	it('should run an async module', () => {
 		return new Promise((resolve, reject) => {
 			runTask('task4', directories, {}, { stack: [] })
@@ -258,6 +341,44 @@ describe('runTask', () => {
 				})
 				.catch(reject);
 		});
+	});
+
+	it('should prompt interactive configs when mode is on', async () => {
+		configureInquirer({
+			'first-config': 'value',
+			'second-config': 'other value',
+		});
+
+		await runTask('task6', directories, {}, { interactive: true });
+
+		expect(task6).toHaveBeenCalledTimes(1);
+
+		const getter = task6.mock.calls[0][0];
+		expect(getter('first-config')).toEqual('value');
+		expect(getter('second-config')).toEqual('other value');
+	});
+
+	it('should respect config defaults from task parameters when interactive mode is on', async () => {
+		configureInquirer({ 'first-config': 'value' });
+
+		await runTask('task6', directories, {}, { interactive: true });
+
+		expect(task6).toHaveBeenCalledTimes(1);
+		expect(task6.mock.calls[0][0]('first-config')).toEqual('value');
+		expect(task6.mock.calls[0][0]('second-config')).toEqual('default value');
+	});
+
+	it('should respect config defaults from task parameters when interactive mode is off', async () => {
+		await runTask('task6', directories, {}, { interactive: false });
+
+		expect(task6).toHaveBeenCalledTimes(1);
+		expect(task6.mock.calls[0][0]('first-config')).toBeUndefined();
+		expect(task6.mock.calls[0][0]('second-config')).toEqual('default value');
+	});
+
+	it('should run normally when interactive mode is on but task has no interactive parameters', async () => {
+		await runTask('task3', directories, {}, { interactive: true });
+		expect(task3).toHaveBeenCalledTimes(1);
 	});
 });
 
@@ -401,6 +522,8 @@ describe('getAllTasks', () => {
 			task3: 'Taks 2.3',
 			task4: 'Taks 2.4',
 			task5: 'Taks 2.5',
+			task6: 'Taks 3.6',
+			task7: '',
 		});
 	});
 });

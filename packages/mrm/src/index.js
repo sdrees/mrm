@@ -6,6 +6,7 @@ const glob = require('glob');
 const kleur = require('kleur');
 const requireg = require('requireg');
 const { get, forEach } = require('lodash');
+const inquirer = require('inquirer');
 const {
 	MrmUnknownTask,
 	MrmInvalidTask,
@@ -118,11 +119,11 @@ function runAlias(aliasName, directories, options, argv) {
  *
  * @param {string} taskName
  * @param {string[]} directories
- * @param {Object} options
+ * @param {Object} defaults
  * @param {Object} [argv]
  * @returns {Promise}
  */
-function runTask(taskName, directories, options, argv) {
+function runTask(taskName, directories, defaults, argv) {
 	return new Promise((resolve, reject) => {
 		const modulePath = tryResolve(
 			tryFile(directories, `${taskName}/index.js`),
@@ -140,15 +141,63 @@ function runTask(taskName, directories, options, argv) {
 			reject(
 				new MrmInvalidTask(`Cannot call task “${taskName}”.`, { taskName })
 			);
+			return;
 		}
 
+		const options = processTaskOptions(module, argv.interactive, defaults);
+
 		console.log(kleur.cyan(`Running ${taskName}...`));
-		Promise.resolve(module(getConfigGetter(options), argv))
-			.then(() => {
-				resolve();
-			})
-			.catch(reject);
+
+		Promise.resolve(options)
+			.then(getConfigGetter)
+			.then(config => module(config, argv))
+			.catch(reject)
+			.then(resolve);
 	});
+}
+
+/**
+ * Get task specific interactive config options (by using prompt or defaults).
+ *
+ * @param {Object} task
+ * @param {Object} interactive? Whether or not interactive mode is enabled.
+ * @param {Object} options? Default available options passed into the task.
+ */
+async function processTaskOptions(task, interactive = false, options = {}) {
+	// Avoid mutation, but keep code simplicity
+	const defaults = { ...options };
+
+	// If no parameters set, resolve to default options (from config file or command line).
+	if (!task.parameters) {
+		return options;
+	}
+
+	const prompts = [];
+	const parameters = Object.entries(task.parameters);
+
+	for (const [name, prompt] of parameters) {
+		const hasPromptDefault = typeof prompt.default !== 'undefined';
+		const hasCliDefault = typeof defaults[name] !== 'undefined';
+
+		// Ensure we merge available default options with parameter initial values.
+		if (!interactive && hasPromptDefault && !hasCliDefault) {
+			defaults[name] =
+				typeof prompt.default === 'function'
+					? await prompt.default({ ...defaults })
+					: prompt.default;
+		}
+
+		if (interactive) {
+			prompts.push({
+				...prompt,
+				name,
+				// consume cli default in case no prompt default available.
+				default: hasCliDefault ? defaults[name] : prompt.default,
+			});
+		}
+	}
+
+	return interactive ? inquirer.prompt(prompts) : defaults;
 }
 
 /**
@@ -319,6 +368,7 @@ module.exports = {
 	getConfig,
 	getConfigFromFile,
 	getConfigFromCommandLine,
+	processTaskOptions,
 	tryFile,
 	tryResolve,
 	firstResult,
