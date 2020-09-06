@@ -1,10 +1,11 @@
 jest.mock('fs');
+jest.mock('git-username');
 jest.mock('mrm-core/src/util/log', () => ({
 	added: jest.fn(),
 }));
 
 const path = require('path');
-const { getConfigGetter } = require('mrm');
+const { getTaskOptions } = require('mrm');
 const vol = require('memfs').vol;
 const task = require('./index');
 
@@ -19,19 +20,21 @@ afterEach(() => {
 	process.chdir('/');
 });
 
-it('should add package.json', () => {
+it('should add package.json', async () => {
 	// The task will use the folder name as a package name
 	vol.mkdirpSync(__dirname);
 	process.chdir(__dirname);
 
-	task(getConfigGetter(options));
+	task(await getTaskOptions(task, false, options));
 
 	expect(vol.toJSON()[path.join(__dirname, 'package.json')]).toMatchSnapshot();
 });
 
-it('should set custom Node.js version', () => {
+it('should set custom Node.js version', async () => {
 	task(
-		getConfigGetter(
+		await getTaskOptions(
+			task,
+			false,
 			Object.assign({}, options, {
 				minNode: '9.1',
 			})
@@ -40,9 +43,11 @@ it('should set custom Node.js version', () => {
 	expect(vol.toJSON()['/package.json']).toMatchSnapshot();
 });
 
-it('should set custom license', () => {
+it('should set custom license', async () => {
 	task(
-		getConfigGetter(
+		await getTaskOptions(
+			task,
+			false,
 			Object.assign({}, options, {
 				license: 'BSD',
 			})

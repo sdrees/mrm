@@ -3,6 +3,91 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.4.2](https://github.com/sapegin/mrm/compare/mrm@2.4.1...mrm@2.4.2) (2020-09-05)
+
+**Note:** Version bump only for package mrm
+
+
+
+
+
+## [2.4.1](https://github.com/sapegin/mrm/compare/mrm@2.4.0...mrm@2.4.1) (2020-09-05)
+
+
+### Bug Fixes
+
+* Add dependabot task to dependencies ([0f698f4](https://github.com/sapegin/mrm/commit/0f698f461793678fda5678ce995360b9877378aa))
+
+
+
+
+
+# [2.4.0](https://github.com/sapegin/mrm/compare/mrm@2.3.6...mrm@2.4.0) (2020-09-05)
+
+
+### Features
+
+* Add task that adds GitHub Actions workflow to automerge Dependabot pull requests ([072b443](https://github.com/sapegin/mrm/commit/072b443b912fe44f1188cce54b26ea933bd5a6db))
+
+
+
+
+
+## [2.3.6](https://github.com/sapegin/mrm/compare/mrm@2.3.5...mrm@2.3.6) (2020-09-02)
+
+**Note:** Version bump only for package mrm
+
+
+
+
+
+## [2.3.5](https://github.com/sapegin/mrm/compare/mrm@2.3.4...mrm@2.3.5) (2020-08-19)
+
+**Note:** Version bump only for package mrm
+
+
+
+
+
+## [2.3.4](https://github.com/sapegin/mrm/compare/mrm@2.3.3...mrm@2.3.4) (2020-08-15)
+
+**Note:** Version bump only for package mrm
+
+
+
+
+
+## [2.3.3](https://github.com/sapegin/mrm/compare/mrm@2.3.2...mrm@2.3.3) (2020-06-18)
+
+
+### Bug Fixes
+
+* Migrate to the new parameters API ([fcc2d61](https://github.com/sapegin/mrm/commit/fcc2d61be7ec720b0cd4c45e3cb65c6f543a45fb))
+
+
+
+
+
+## [2.3.2](https://github.com/sapegin/mrm/compare/mrm@2.3.1...mrm@2.3.2) (2020-06-18)
+
+**Note:** Version bump only for package mrm
+
+
+
+
+
+## [2.3.1](https://github.com/sapegin/mrm/compare/mrm@2.3.0...mrm@2.3.1) (2020-06-08)
+
+
+### Bug Fixes
+
+* **mrm:** Fix link in readme ([3558b83](https://github.com/sapegin/mrm/commit/3558b837ca3d2c6a31daa000877f157b2c39ab7f)), closes [#78](https://github.com/sapegin/mrm/issues/78)
+* **mrm:** Fix links in readme ([e837d45](https://github.com/sapegin/mrm/commit/e837d4557765e5e08947bb8e7f03718e0ce14bf3)), closes [#78](https://github.com/sapegin/mrm/issues/78)
+
+
+
+
+
 # [2.3.0](https://github.com/sapegin/mrm/compare/mrm@2.2.1...mrm@2.3.0) (2020-04-29)
 
 

@@ -1,0 +1,36 @@
+{
+  "name": "site",
+  "version": "0.0.4",
+  "private": true,
+  "scripts": {
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "swizzle": "docusaurus swizzle",
+    "deploy": "docusaurus deploy",
+    "sync": "node scripts/sync.js"
+  },
+  "dependencies": {
+    "@charlietango/use-script": "^2.1.1",
+    "@docusaurus/core": "^2.0.0-alpha.55",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.55",
+    "classnames": "^2.2.6",
+    "fs-extra": "^9.0.1",
+    "glob": "^7.1.6",
+    "lodash": "^4.17.15",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "unist-util-visit": "^2.0.2"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
