@@ -3,6 +3,46 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [2.1.5](https://github.com/sapegin/mrm/compare/mrm-task-package@2.1.4...mrm-task-package@2.1.5) (2020-11-04)
+
+**Note:** Version bump only for package mrm-task-package
+
+
+
+
+
+## [2.1.4](https://github.com/sapegin/mrm/compare/mrm-task-package@2.1.3...mrm-task-package@2.1.4) (2020-10-27)
+
+**Note:** Version bump only for package mrm-task-package
+
+
+
+
+
+## [2.1.3](https://github.com/sapegin/mrm/compare/mrm-task-package@2.1.2...mrm-task-package@2.1.3) (2020-10-27)
+
+**Note:** Version bump only for package mrm-task-package
+
+
+
+
+
+## [2.1.2](https://github.com/sapegin/mrm/compare/mrm-task-package@2.1.1...mrm-task-package@2.1.2) (2020-10-27)
+
+**Note:** Version bump only for package mrm-task-package
+
+
+
+
+
+## [2.1.1](https://github.com/sapegin/mrm/compare/mrm-task-package@2.1.0...mrm-task-package@2.1.1) (2020-10-26)
+
+**Note:** Version bump only for package mrm-task-package
+
+
+
+
+
 # [2.1.0](https://github.com/sapegin/mrm/compare/mrm-task-package@2.0.6...mrm-task-package@2.1.0) (2020-09-02)
 
 

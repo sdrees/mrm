@@ -3,11 +3,12 @@ jest.mock('mrm-core/src/util/log', () => ({
 	added: jest.fn(),
 }));
 
-const fs = require.requireActual('fs');
+const fs = jest.requireActual('fs');
 const path = require('path');
-const { getConfigGetter } = require('mrm');
+const { getTaskOptions } = require('mrm');
 const vol = require('memfs').vol;
 const task = require('./index');
+const getAuthorName = require('./index').getAuthorName;
 const { json } = require('mrm-core');
 
 const console$log = console.log;
@@ -29,19 +30,19 @@ afterEach(() => {
 	console.log = console$log;
 });
 
-it('should add EditorConfig', () => {
+it('should add EditorConfig', async () => {
 	vol.fromJSON({
 		[`${__dirname}/templates/MIT.md`]: fs
 			.readFileSync(path.join(__dirname, 'templates/MIT.md'))
 			.toString(),
 	});
 
-	task(getConfigGetter(config));
+	task(await getTaskOptions(task, false, config));
 
 	expect(vol.toJSON()['/License.md']).toMatchSnapshot();
 });
 
-it('should read lincese name from package.json', () => {
+it('should read license name from package.json', async () => {
 	vol.fromJSON({
 		[`${__dirname}/templates/Apache-2.0.md`]: fs
 			.readFileSync(path.join(__dirname, 'templates/Apache-2.0.md'))
@@ -52,14 +53,14 @@ it('should read lincese name from package.json', () => {
 		}),
 	});
 
-	task(getConfigGetter(config));
+	task(await getTaskOptions(task, false, config));
 
 	expect(vol.toJSON()['/License.md']).toMatchSnapshot();
 });
 
-it('should skip when template not found', () => {
+it('should skip when template not found', async () => {
 	task(
-		getConfigGetter({
+		await getTaskOptions(task, false, {
 			name: 'Gendalf',
 			email: 'gendalf@middleearth.com',
 			url: 'https://middleearth.com',
@@ -69,7 +70,7 @@ it('should skip when template not found', () => {
 	expect(console.log).toBeCalledWith(expect.stringMatching('skipping'));
 });
 
-it('should use license config argument', () => {
+it('should use license config argument', async () => {
 	vol.fromJSON({
 		[`${__dirname}/templates/Unlicense.md`]: fs
 			.readFileSync(path.join(__dirname, 'templates/Unlicense.md'))
@@ -77,7 +78,7 @@ it('should use license config argument', () => {
 	});
 
 	task(
-		getConfigGetter({
+		await getTaskOptions(task, false, {
 			license: 'Unlicense',
 		})
 	);
@@ -85,14 +86,35 @@ it('should use license config argument', () => {
 	expect(vol.readFileSync('/License.md', 'utf8')).toMatchSnapshot();
 });
 
-it('adds license to package.json if not set', () => {
+it('adds license to package.json if not set', async () => {
 	vol.fromJSON({
 		[`${__dirname}/templates/MIT.md`]: fs
 			.readFileSync(path.join(__dirname, 'templates/MIT.md'))
 			.toString(),
 	});
 
-	task(getConfigGetter(config));
+	task(await getTaskOptions(task, false, config));
 
 	expect(json('/package.json').get('license')).toBe('MIT');
+});
+
+it.each([
+	[
+		{ author: 'Barney Rubble <example@name.com> (http://example.com/)' },
+		'Barney Rubble',
+	],
+	[{ author: 'Barney Rubble (http://example.com/)' }, 'Barney Rubble'],
+	[{ author: 'Barney Rubble <example@name.com>' }, 'Barney Rubble'],
+	[{ author: 'Barney Rubble ' }, 'Barney Rubble'],
+	[{ author: { name: 'Barney Rubble' } }, 'Barney Rubble'],
+	[{ author: undefined }, undefined],
+	[undefined, undefined],
+])('Should get author name form package.json', (field, expected) => {
+	vol.fromJSON({
+		'/package.json': stringify(Object.assign({}, field)),
+	});
+
+	const authorName = getAuthorName(json('/package.json'));
+
+	expect(authorName).toBe(expected);
 });
